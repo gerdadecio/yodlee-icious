@@ -4,6 +4,7 @@ require 'json'
 module Yodleeicious
   class YodleeApi
     attr_reader :base_url, :cobranded_username, :cobranded_password, :proxy_url, :logger
+    attr_reader :request_url, :response, :payload
 
     def initialize config = {}
       configure config
@@ -16,7 +17,10 @@ module Yodleeicious
       @cobranded_password = config[:cobranded_password] || Yodleeicious::Config.cobranded_password
       @proxy_url = config[:proxy_url] || Yodleeicious::Config.proxy_url
       @logger = config[:logger] || Yodleeicious::Config.logger
-      
+      @request_url = nil
+      @response = nil
+      @payload = nil
+
       info_log "YodleeApi configured with base_url=#{base_url} cobranded_username=#{cobranded_username} proxy_url=#{proxy_url} logger=#{logger}"
     end
 
@@ -32,7 +36,7 @@ module Yodleeicious
       proxy_opts = {}
 
       unless proxy_url == nil
-        proxy_opts[:uri] = URI.parse(proxy_url) 
+        proxy_opts[:uri] = URI.parse(proxy_url)
         proxy_opts[:socks] = use_socks?
       end
 
@@ -40,7 +44,7 @@ module Yodleeicious
     end
 
     def use_socks?
-      return proxy_url != nil && proxy_url.start_with?('socks') 
+      return proxy_url != nil && proxy_url.start_with?('socks')
     end
 
     def cobranded_login
@@ -138,7 +142,7 @@ module Yodleeicious
     end
 
     def add_site_account site_id, site_login_form
-      params = { 
+      params = {
         siteId: site_id
       }.merge(translator.site_login_form_to_add_site_account_params(site_login_form))
 
@@ -167,7 +171,7 @@ module Yodleeicious
     end
 
     def should_retry_get_site_refresh_info? response, try, max_trys
-      return response.success? && try < max_trys && (response.body['code'] == 801  || (response.body['code'] == 0 && 
+      return response.success? && try < max_trys && (response.body['code'] == 801  || (response.body['code'] == 0 &&
         response.body['siteRefreshStatus']['siteRefreshStatus'] != 'REFRESH_COMPLETED' &&
         response.body['siteRefreshStatus']['siteRefreshStatus'] != 'REFRESH_TIMED_OUT' &&
         response.body['siteRefreshStatus']['siteRefreshStatus'] != 'LOGIN_SUCCESS' ))
@@ -324,7 +328,10 @@ module Yodleeicious
       ssl_opts = { verify: false }
       connection = Faraday.new(url: base_url, ssl: ssl_opts, request: { proxy: proxy_opts })
 
+      @request_url = "#{base_url}#{uri}"
+      @payload = params
       response = connection.post("#{base_url}#{uri}", params)
+      @response = response.body
       debug_log "response=#{response.status} success?=#{response.success?} body=#{response.body} "
 
       case response.status
