@@ -4,7 +4,6 @@ require 'json'
 module Yodleeicious
   class YodleeApi
     attr_reader :base_url, :cobranded_username, :cobranded_password, :proxy_url, :logger
-    attr_reader :request_url, :response, :payload
 
     def initialize config = {}
       configure config
@@ -17,9 +16,6 @@ module Yodleeicious
       @cobranded_password = config[:cobranded_password] || Yodleeicious::Config.cobranded_password
       @proxy_url = config[:proxy_url] || Yodleeicious::Config.proxy_url
       @logger = config[:logger] || Yodleeicious::Config.logger
-      @request_url = nil
-      @response = nil
-      @payload = nil
 
       info_log "YodleeApi configured with base_url=#{base_url} cobranded_username=#{cobranded_username} proxy_url=#{proxy_url} logger=#{logger}"
     end
@@ -328,15 +324,13 @@ module Yodleeicious
       ssl_opts = { verify: false }
       connection = Faraday.new(url: base_url, ssl: ssl_opts, request: { proxy: proxy_opts })
 
-      @request_url = "#{base_url}#{uri}"
-      @payload = params
       response = connection.post("#{base_url}#{uri}", params)
-      @response = response.body
+
       debug_log "response=#{response.status} success?=#{response.success?} body=#{response.body} "
 
       case response.status
       when 200
-        Response.new(JSON.parse(response.body))
+        Response.new(response, params)
       else
       end
     end
