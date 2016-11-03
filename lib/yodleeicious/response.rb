@@ -11,7 +11,7 @@ module Yodleeicious
     end
 
     def fail?
-      body.kind_of?(Hash) && (body['errorOccurred'] == 'true' || body.has_key?('Error'))
+      body.kind_of?(Hash) && (body['errorOccurred'] == 'true' || body.has_key?('Error') || body.has_key?('errorCode'))
     end
 
     def body
